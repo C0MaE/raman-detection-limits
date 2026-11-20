@@ -1,9 +1,18 @@
-wavecount_axes:
-  min: 100
-  max: 3000
-sigma_read: 3
-snr_range:
-  min: 0.5
-  max: 20
-num_spectra: 20000
 seed: 42
+axis:
+  nu_min: 100.0
+  nu_max: 3000.0
+  n_points: 1024
+noise:
+  sigma_read: 3.0
+dataset:
+  n_spectra: 20000
+  signal_fraction: 0.5
+  snr_range: [0.5, 20.0]
+background:
+  ratio_range: [0.5, 10.0]   # r = B(nu_G) / A_G, log-uniform
+peaks:
+  G:
+    center_range: [1580.0, 1600.0]
+    fwhm_range: [12.0, 30.0]
+    amplitude: 1.0

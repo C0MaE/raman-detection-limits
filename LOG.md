@@ -17,3 +17,43 @@ $\text{SNR} = a t / \sqrt{b t + \sigma_\text{read}^2}$, which `exposure_for_snr`
 `lorentz` gives the peak shape. Both have tests.
 
 Learned along the way: tests should be deterministic, and how to use pytest parametrize
+
+## 2026-11-19 · Peak sampling, background and noise
+
+Each spectrum now gets its own random parameters. `sample_peaks` draws the position and
+width of the G band uniformly from ranges in `config.yaml` (version 0 has only the G band).
+`background` adds a constant background whose level relative to the peak,
+$r = B(\tilde\nu_G)/A_G$, is drawn log-uniformly between 0.5 and 10, so that every factor
+is equally likely. `add_noise` turns the smooth expected counts $\lambda$ into a measurement:
+a Poisson draw for every pixel plus Gaussian read-out noise.
+
+The test for `add_noise` checks mean and variance over 100,000 draws:
+
+$$\langle N \rangle = \lambda, \qquad \operatorname{Var}(N) = \lambda + \sigma_\text{read}^2.$$
+
+Learned along the way: variances of independent noise sources add, standard deviations
+don't. With $\lambda = 400$ and $\sigma_\text{read} = 3$ the total noise is
+$\sqrt{409} \approx 20.2$, not $23$.
+
+## 2026-11-20 · Generating spectra and the dataset
+
+`generate_spectrum` puts the pieces together: draw the peaks, build the background, compute
+the exposure time for the target SNR, add the Lorentzian signal only if the spectrum is
+labelled as containing one, then add noise. Everything up to the exposure time is drawn the
+same way for both classes, so background level and noise cannot give the label away; a model
+has to find the peak. `generate_dataset` creates 20,000 spectra, exactly half of them with
+signal (shuffled with `rng.permutation`), with the SNR drawn log-uniformly between 0.5 and 20.
+`scripts/make_dataset.py` saves them to `data/dataset.npz`, which is not committed because
+config and seed reproduce it exactly.
+
+The SNR test recomputes the SNR from the noise-free spectrum at the grid point closest to
+the G band centre. It comes out up to 5 % low: the axis spacing is about 2.8 cm⁻¹, and the
+centre almost never falls on a grid point. For the narrowest G band the nearest point still
+reaches at least $1/(1 + (1.4/6)^2) \approx 0.95$ of the peak height.
+
+Looking at the first spectra: at SNR 3 the peak is barely visible by eye, at SNR 10 it is
+obvious. That grey zone is where the models will have to prove themselves.
+
+Learned along the way: a random generator is a stream of numbers, so a reproducibility test
+needs two generators with the same seed rather than one used twice. And a notebook keeps the
+old version of a module until the kernel restarts, unless `%autoreload 2` is on.
