@@ -57,3 +57,35 @@ obvious. That grey zone is where the models will have to prove themselves.
 Learned along the way: a random generator is a stream of numbers, so a reproducibility test
 needs two generators with the same seed rather than one used twice. And a notebook keeps the
 old version of a module until the kernel restarts, unless `%autoreload 2` is on.
+
+## 2026-11-23 · A baseline without machine learning
+
+Before training any model I need a yardstick: a simple detector that every model has to
+beat. `detection_statistic` computes one number per spectrum in four steps. Savitzky–Golay
+smoothing (window 11, order 2) lowers the pixel noise to about 0.46 of its original value
+while keeping the peak shape. The median of each spectrum estimates the constant background,
+which a few peak pixels barely move. The noise is estimated robustly with the scaled median
+absolute deviation, $\hat\sigma = 1.4826 \cdot \operatorname{MAD}$. The statistic is the
+highest point of the residual inside the G band window, in units of the noise:
+
+$$s = \frac{\max_{\tilde\nu_i \in [1560,\,1620]} r_i}{\hat\sigma}.$$
+
+Searching only where the G band can be keeps the look-elsewhere effect small: the maximum
+of pure noise grows with the number of places you look.
+
+The histogram of $s$ shows what I hoped for. Spectra without signal sit in a narrow band
+between about 0.5 and 2.5; spectra with signal reach up to $s \approx 40$, roughly twice
+their SNR, because smoothing removes noise faster than it flattens the peak. At low SNR the
+two distributions overlap, and that overlap is the grey zone the project is about.
+
+For the evaluation, `split_dataset` makes one stratified train/test split shared by all
+models, `calibrate_threshold` puts the threshold at the 99th percentile of the
+signal-free training spectra (1 % false alarms), and `efficiency_vs_snr` counts the detected
+fraction per logarithmic SNR bin with binomial errors
+$\sigma_\varepsilon = \sqrt{\varepsilon(1-\varepsilon)/n}$.
+
+Learned along the way: `keepdims=True` keeps a per-spectrum value as a column so it
+broadcasts across each row. Two histograms drawn with their own bins are not comparable.
+And two silent traps in NumPy: indexing with an integer array of 0s and 1s selects
+positions instead of filtering, and `np.histogram` with a number of bins picks different
+edges for different inputs.

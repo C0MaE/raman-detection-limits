@@ -16,3 +16,11 @@ peaks:
     center_range: [1580.0, 1600.0]
     fwhm_range: [12.0, 30.0]
     amplitude: 1.0
+split:
+  test_size: 0.3
+  seed: 0
+baseline:
+  savgol_window: 11
+  savgol_polyorder: 2
+  search_range: [1560.0, 1620.0]
+  fpr: 0.01
