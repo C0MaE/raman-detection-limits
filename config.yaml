@@ -24,3 +24,5 @@ baseline:
   savgol_polyorder: 2
   search_range: [1560.0, 1620.0]
   fpr: 0.01
+evaluation:
+  n_bins: 12

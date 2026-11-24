@@ -89,3 +89,31 @@ broadcasts across each row. Two histograms drawn with their own bins are not com
 And two silent traps in NumPy: indexing with an integer array of 0s and 1s selects
 positions instead of filtering, and `np.histogram` with a number of bins picks different
 edges for different inputs.
+
+## 2026-11-24 · First efficiency curve
+
+`scripts/run_baseline.py` runs the full evaluation for the first time: split the dataset,
+compute $s$ for train and test, set the threshold on the signal-free training spectra,
+check the false positive rate on the test set, and count the detected fraction per SNR bin.
+The threshold lands at $s = 3.24$, and on the test set 1.2 % of the signal-free spectra
+exceed it, close to the target of 1 % (the statistical spread with about 3000 spectra is
+roughly 0.2 %). So the calibration carries over to unseen data.
+
+The baseline detects about 10 % of the signals at SNR 0.6, half of them at
+$\text{SNR}_{50} \approx 1.3$, 90 % at $\text{SNR}_{90} \approx 2.2$, and everything above
+SNR 4 (rough log interpolation between bins; a proper sigmoid fit comes later). That is
+better than my eye: at SNR 3 I could barely see the peak in a raw spectrum. The SNR is
+defined by the peak height at a single pixel, but the peak spans several pixels, and
+smoothing combines them, which gains roughly a factor of two.
+
+Two things to improve later. Above SNR 4 every bin sits at 100 %, so half of the bins
+cannot separate models; the interesting range is 0.5 to 3. And the binomial error
+$\sqrt{\varepsilon(1-\varepsilon)/n}$ is zero at $\varepsilon = 1$, which overstates the
+certainty; a Wilson or Clopper–Pearson interval would be more honest.
+
+Learned along the way: the first run gave a threshold of 34 and 0 % false alarms on the
+test set, because I had calibrated on all training spectra instead of only the
+signal-free ones. The false positive check caught it immediately. A second slip, passing
+the statistic values instead of the detection decisions to `efficiency_vs_snr`, slipped
+past the `dtype=bool` conversion, so the function now checks shapes and that the mask
+contains only 0/1 or True/False.
